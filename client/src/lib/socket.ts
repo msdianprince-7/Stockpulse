@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:5000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === 'production' ? 'https://stockpulse-vr8w.onrender.com' : 'http://localhost:5000');
 
 class SocketClient {
   private socket: Socket | null = null;
