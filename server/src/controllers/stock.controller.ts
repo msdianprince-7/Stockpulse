@@ -5,25 +5,58 @@ import { stockService } from '../services/stock.service';
 export const searchStocks = async (req: Request, res: Response): Promise<void> => {
   try {
     const { q, exchange, sector } = req.query;
+    const queryStr = String(q || '');
 
-    const stocks = await prisma.stock.findMany({
+    // 1. Search Local Database
+    const dbStocks = await prisma.stock.findMany({
       where: {
         AND: [
-          q ? {
+          queryStr ? {
             OR: [
-              { symbol: { contains: String(q), mode: 'insensitive' } },
-              { name: { contains: String(q), mode: 'insensitive' } },
+              { symbol: { contains: queryStr, mode: 'insensitive' } },
+              { name: { contains: queryStr, mode: 'insensitive' } },
             ],
           } : {},
           exchange ? { exchange: exchange as 'NSE' | 'BSE' } : {},
           sector ? { sector: String(sector) } : {},
         ],
       },
-      take: 20,
+      take: 15,
       orderBy: { symbol: 'asc' },
     });
 
-    res.json(stocks);
+    const resultsMap = new Map<string, any>();
+    dbStocks.forEach((stock) => resultsMap.set(stock.symbol, stock));
+
+    // 2. Search Yahoo Finance (if query provided)
+    if (queryStr && queryStr.length > 1) {
+      try {
+        const yahooResults = await stockService.searchSymbol(queryStr + '.NS');
+        const quotes = yahooResults.quotes || [];
+
+        quotes.forEach((quote: any) => {
+          // Only include Indian stocks (NSE/BSE) or ones that match the query closely
+          if (quote.symbol && (quote.symbol.endsWith('.NS') || quote.symbol.endsWith('.BO'))) {
+            const cleanSymbol = quote.symbol.replace('.NS', '').replace('.BO', '');
+            
+            if (!resultsMap.has(cleanSymbol)) {
+              resultsMap.set(cleanSymbol, {
+                id: `yahoo_${cleanSymbol}`,
+                symbol: cleanSymbol,
+                name: quote.longname || quote.shortname || cleanSymbol,
+                exchange: quote.symbol.endsWith('.NS') ? 'NSE' : 'BSE',
+                sector: quote.sector || quote.industry || 'Equities',
+                currentPrice: 0, // Placeholder, fetched on stock page
+              });
+            }
+          }
+        });
+      } catch (yahooErr) {
+        console.error('Yahoo search error:', yahooErr);
+      }
+    }
+
+    res.json(Array.from(resultsMap.values()).slice(0, 20));
   } catch (error) {
     console.error('Search stocks error:', error);
     res.status(500).json({ error: 'Failed to search stocks' });
