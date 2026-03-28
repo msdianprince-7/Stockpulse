@@ -3,9 +3,16 @@ import http from 'http';
 import { startMockPriceEngine, registerActiveSymbol } from '../services/mockPriceEngine';
 
 export const initializeSocket = (server: http.Server) => {
+  const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:3000'];
   const io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:3000',
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost:')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },
