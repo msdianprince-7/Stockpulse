@@ -57,9 +57,9 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
     }
 
     res.json(Array.from(resultsMap.values()).slice(0, 20));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search stocks error:', error);
-    res.status(500).json({ error: 'Failed to search stocks' });
+    res.status(500).json({ error: 'Failed to search stocks', details: error?.message, stack: error?.stack });
   }
 };
 
