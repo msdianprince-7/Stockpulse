@@ -14,6 +14,11 @@ import marketRoutes from './routes/market.routes';
 
 dotenv.config();
 
+// Fix for BigInt JSON serialization error in Prisma/Express
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 const app = express();
 const server = http.createServer(app);
 

@@ -1,0 +1,10 @@
+Failed to search stocks
+
+Do not know how to serialize a BigInt
+
+TypeError: Do not know how to serialize a BigInt
+    at JSON.stringify (<anonymous>)
+    at stringify (/opt/render/project/src/server/node_modules/express/lib/response.js:1034:12)
+    at ServerResponse.json (/opt/render/project/src/server/node_modules/express/lib/response.js:245:14)
+    at searchStocks (/opt/render/project/src/server/dist/controllers/stock.controller.js:55:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
