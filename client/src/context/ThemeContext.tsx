@@ -31,6 +31,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setMounted(true);
   }, []);
 
+  // Apply theme class even before render to prevent flash
   useEffect(() => {
     if (!mounted) return;
     const root = document.documentElement;
@@ -45,9 +46,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
-
-  // Prevent flash of wrong theme
-  if (!mounted) return null;
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
