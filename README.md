@@ -1,5 +1,7 @@
 # 📊 StockPulse – Real-Time Indian Stock Analytics Platform
 
+🚀 **Live Demo:** [https://stockpulse-market7.vercel.app/](https://stockpulse-market7.vercel.app/)
+
 A full-stack platform for searching Indian stocks, viewing real-time charts, tracking portfolios, getting live news, and analyzing market trends.
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
