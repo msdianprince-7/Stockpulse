@@ -65,35 +65,59 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
 
 export const getStockBySymbol = async (req: Request, res: Response): Promise<void> => {
   try {
-    const symbol = String(req.params.symbol);
+    const symbol = String(req.params.symbol).toUpperCase();
 
     let stock = await prisma.stock.findUnique({
-      where: { symbol: symbol.toUpperCase() },
+      where: { symbol },
     });
 
+    // Dynamically insert the stock from Yahoo Finance if it doesn't exist
     if (!stock) {
-      res.status(404).json({ error: 'Stock not found' });
-      return;
-    }
-
-    // Try fetching the live quote immediately to replace any dummy seed prices 
-    // before the WebSocket engine's 10-second polling ticks.
-    try {
-      const liveQuote = await stockService.getQuote(symbol);
-      if (liveQuote && liveQuote.c && liveQuote.c !== stock.currentPrice) {
-        stock = await prisma.stock.update({
-          where: { id: stock.id },
-          data: { currentPrice: liveQuote.c }
+      try {
+        const profile = await stockService.getCompanyProfile(symbol);
+        const currentQuote = await stockService.getQuote(symbol);
+        
+        stock = await prisma.stock.create({
+          data: {
+            symbol: symbol,
+            name: profile.name || symbol,
+            exchange: profile.exchange === 'BSE' ? 'BSE' : 'NSE',
+            sector: profile.industry || 'Equities',
+            currentPrice: currentQuote?.c || 0,
+            dayHigh: currentQuote?.h || 0,
+            dayLow: currentQuote?.l || 0,
+            volume: BigInt(0), 
+          }
         });
+      } catch (err) {
+        console.error('Failed to create missing stock:', err);
+        res.status(404).json({ error: 'Stock not found' });
+        return;
       }
-    } catch (e) {
-      // Ignore background quote failure and serve DB value as fallback
+    } else {
+      // Try fetching the live quote immediately to replace any dummy seed prices 
+      // before the WebSocket engine's 10-second polling ticks.
+      try {
+        const liveQuote = await stockService.getQuote(symbol);
+        if (liveQuote && liveQuote.c && liveQuote.c !== stock.currentPrice) {
+          stock = await prisma.stock.update({
+            where: { id: stock.id },
+            data: { 
+              currentPrice: liveQuote.c,
+              dayHigh: liveQuote.h || stock.dayHigh,
+              dayLow: liveQuote.l || stock.dayLow
+            }
+          });
+        }
+      } catch (e) {
+        // Ignore background quote failure and serve DB value as fallback
+      }
     }
 
     res.json(stock);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get stock error:', error);
-    res.status(500).json({ error: 'Failed to get stock' });
+    res.status(500).json({ error: 'Failed to get stock', details: error?.message });
   }
 };
 
