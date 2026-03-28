@@ -33,6 +33,7 @@ export const authAPI = {
 export const stockAPI = {
   search: (query: string) => api.get(`/stocks/search?q=${query}`),
   getBySymbol: (symbol: string) => api.get(`/stocks/${symbol}`),
+  getChart: (symbol: string, range: string) => api.get(`/stocks/${symbol}/chart?range=${range}`),
   getAll: () => api.get('/stocks/all'),
   getTopGainers: () => api.get('/stocks/top-gainers'),
   getTopLosers: () => api.get('/stocks/top-losers'),

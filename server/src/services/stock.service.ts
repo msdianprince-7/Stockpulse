@@ -1,20 +1,27 @@
-import axios from 'axios';
-
-const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
+import YahooFinance from 'yahoo-finance2';
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 class StockService {
-  private apiKey: string;
-
   constructor() {
-    this.apiKey = process.env.FINNHUB_API_KEY || '';
+    // empty
+  }
+
+  private getYahooNS(symbol: string) {
+    // Yahoo expects NSE stocks to have .NS suffix
+    return `${symbol.toUpperCase()}.NS`;
   }
 
   async getQuote(symbol: string) {
     try {
-      const response = await axios.get(`${FINNHUB_BASE_URL}/quote`, {
-        params: { symbol, token: this.apiKey },
-      });
-      return response.data;
+      const quote: any = await yahooFinance.quote(this.getYahooNS(symbol));
+      // Map to expected format
+      return {
+        c: quote.regularMarketPrice,
+        h: quote.regularMarketDayHigh,
+        l: quote.regularMarketDayLow,
+        o: quote.regularMarketOpen,
+        pc: quote.regularMarketPreviousClose,
+      };
     } catch (error) {
       console.error(`Failed to fetch quote for ${symbol}:`, error);
       throw error;
@@ -23,10 +30,8 @@ class StockService {
 
   async searchSymbol(query: string) {
     try {
-      const response = await axios.get(`${FINNHUB_BASE_URL}/search`, {
-        params: { q: query, token: this.apiKey },
-      });
-      return response.data;
+      const results = await yahooFinance.search(query);
+      return results;
     } catch (error) {
       console.error(`Failed to search for ${query}:`, error);
       throw error;
@@ -35,10 +40,15 @@ class StockService {
 
   async getCompanyProfile(symbol: string) {
     try {
-      const response = await axios.get(`${FINNHUB_BASE_URL}/stock/profile2`, {
-        params: { symbol, token: this.apiKey },
-      });
-      return response.data;
+      const quote: any = await yahooFinance.quote(this.getYahooNS(symbol));
+      return {
+        name: quote.longName || quote.shortName,
+        ticker: quote.symbol,
+        exchange: quote.exchange,
+        currency: quote.currency,
+        marketCapitalization: quote.marketCap,
+        industry: quote.industry, // Often missing in simple quote
+      };
     } catch (error) {
       console.error(`Failed to fetch profile for ${symbol}:`, error);
       throw error;
@@ -47,37 +57,104 @@ class StockService {
 
   async getCandles(symbol: string, resolution: string, from: number, to: number) {
     try {
-      const response = await axios.get(`${FINNHUB_BASE_URL}/stock/candle`, {
-        params: { symbol, resolution, from, to, token: this.apiKey },
-      });
-      return response.data;
-    } catch (error) {
+      // Map our app's resolution to yahoo-finance intervals
+      // "15", "60", "D", "W"
+      let interval: '1m' | '2m' | '5m' | '15m' | '30m' | '60m' | '90m' | '1h' | '1d' | '5d' | '1wk' | '1mo' | '3mo' = '1d';
+      
+      switch(resolution) {
+        case '15': interval = '15m'; break;
+        case '60': interval = '60m'; break;
+        case 'D': interval = '1d'; break;
+        case 'W': interval = '1wk'; break;
+        case 'M': interval = '1mo'; break;
+      }
+
+      const queryOptions = {
+        period1: new Date(from * 1000),
+        period2: new Date(to * 1000),
+        interval,
+      };
+
+      const result: any = await yahooFinance.chart(this.getYahooNS(symbol), queryOptions as any);
+      
+      const quotes = result?.quotes || [];
+
+      if (!quotes || quotes.length === 0) {
+        return { s: 'no_data' };
+      }
+
+      // Map to the format the controllers/frontend expect (originally mimicking Finnhub)
+      const formatted = {
+        c: quotes.map((r: any) => r.close),
+        h: quotes.map((r: any) => r.high),
+        l: quotes.map((r: any) => r.low),
+        o: quotes.map((r: any) => r.open),
+        t: quotes.map((r: any) => Math.floor(r.date.getTime() / 1000)),
+        v: quotes.map((r: any) => r.volume),
+        s: 'ok'
+      };
+
+      return formatted;
+    } catch (error: any) {
+      // Ignore not found errors for chart data gracefully to allow mock fallback
+      if (error && error.message && error.message.includes('Not Found')) {
+        return { s: 'no_data' };
+      }
       console.error(`Failed to fetch candles for ${symbol}:`, error);
       throw error;
     }
   }
 
-  async getMarketNews(category: string = 'general') {
+  async getMarketNews() {
     try {
-      const response = await axios.get(`${FINNHUB_BASE_URL}/news`, {
-        params: { category, token: this.apiKey },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch market news:', error);
-      throw error;
+      const res: any = await yahooFinance.search('^NSEI', { newsCount: 15 });
+      return res.news || [];
+    } catch (e) {
+      console.error('Market news error:', e);
+      return [];
     }
   }
 
-  async getCompanyNews(symbol: string, from: string, to: string) {
+  async getCompanyNews(symbol: string) {
     try {
-      const response = await axios.get(`${FINNHUB_BASE_URL}/company-news`, {
-        params: { symbol, from, to, token: this.apiKey },
+      // Use Google News RSS — Yahoo Finance search returns generic global news
+      const https = require('https');
+      const query = encodeURIComponent(`${symbol} stock NSE India`);
+      const url = `https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`;
+
+      return new Promise<any[]>((resolve) => {
+        https.get(url, (res: any) => {
+          let data = '';
+          res.on('data', (chunk: string) => data += chunk);
+          res.on('end', () => {
+            try {
+              const items = data.match(/<item>([\s\S]*?)<\/item>/g) || [];
+              const articles = items.slice(0, 10).map((item: string) => {
+                const title = item.match(/<title>(.*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, '') || '';
+                const link = item.match(/<link>(.*?)<\/link>/)?.[1] || item.match(/<link\/>(.*?)(?=<)/)?.[1] || '';
+                const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '';
+                const source = item.match(/<source.*?>(.*?)<\/source>/)?.[1] || 'Google News';
+                return {
+                  uuid: Math.random().toString(36).substring(7),
+                  title,
+                  link: link.trim(),
+                  publisher: source,
+                  providerPublishTime: pubDate ? Math.floor(new Date(pubDate).getTime() / 1000) : Math.floor(Date.now() / 1000),
+                  thumbnail: null,
+                  relatedTickers: [symbol],
+                };
+              });
+              resolve(articles);
+            } catch {
+              resolve([]);
+            }
+          });
+          res.on('error', () => resolve([]));
+        }).on('error', () => resolve([]));
       });
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to fetch news for ${symbol}:`, error);
-      throw error;
+    } catch (e) {
+      console.error(`Company news error ${symbol}:`, e);
+      return [];
     }
   }
 }

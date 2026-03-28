@@ -4,7 +4,7 @@
   "description": "StockPulse - Real-Time Indian Stock Analytics Platform Backend",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
@@ -12,12 +12,18 @@
     "prisma:studio": "prisma studio",
     "prisma:validate": "prisma validate"
   },
-  "keywords": ["stockpulse", "stocks", "analytics", "real-time", "india"],
+  "keywords": [
+    "stockpulse",
+    "stocks",
+    "analytics",
+    "real-time",
+    "india"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "^7.5.0",
+    "@prisma/client": "^6.19.2",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -25,7 +31,8 @@
     "express": "^5.2.1",
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "yahoo-finance2": "^3.14.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -34,8 +41,9 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "nodemon": "^3.1.14",
-    "prisma": "^7.5.0",
+    "prisma": "^6.19.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }

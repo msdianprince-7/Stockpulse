@@ -40,7 +40,7 @@ export const createAlert = async (req: AuthRequest, res: Response): Promise<void
 
 export const deleteAlert = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     await prisma.alert.delete({
       where: { id, userId: req.userId },
@@ -55,7 +55,7 @@ export const deleteAlert = async (req: AuthRequest, res: Response): Promise<void
 
 export const toggleAlert = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const alert = await prisma.alert.findFirst({
       where: { id, userId: req.userId },

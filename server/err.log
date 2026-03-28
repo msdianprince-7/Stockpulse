@@ -1,0 +1,18 @@
+C:\Users\lenovo\Desktop\Sharemarket\server\src\services\stock.service.ts:6
+    (yahooFinance as any).suppressNotices(['yahooSurvey']);
+                          ^
+
+
+TypeError: import_yahoo_finance2.default.suppressNotices is not a function
+    at new StockService (C:\Users\lenovo\Desktop\Sharemarket\server\src\services\stock.service.ts:6:27)
+    at yahooFinance (C:\Users\lenovo\Desktop\Sharemarket\server\src\services\stock.service.ts:115:29)
+    at Object.<anonymous> (C:\Users\lenovo\Desktop\Sharemarket\server\src\services\stock.service.ts:116:16)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Object.transformer (C:\Users\lenovo\Desktop\Sharemarket\server\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at <anonymous> (C:\Users\lenovo\Desktop\Sharemarket\server\src\controllers\stock.controller.ts:3:30)
+
+Node.js v20.20.0

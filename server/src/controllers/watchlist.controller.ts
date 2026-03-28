@@ -44,7 +44,7 @@ export const addToWatchlist = async (req: AuthRequest, res: Response): Promise<v
 
 export const removeFromWatchlist = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { stockId } = req.params;
+    const stockId = String(req.params.stockId);
 
     await prisma.watchlist.delete({
       where: { userId_stockId: { userId: req.userId!, stockId } },

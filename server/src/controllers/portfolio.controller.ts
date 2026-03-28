@@ -102,11 +102,11 @@ export const addHolding = async (req: AuthRequest, res: Response): Promise<void>
 
 export const removeHolding = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { stockId } = req.params;
+    const stockId = String(req.params.stockId);
     const { quantity, price } = req.body;
 
     const existing = await prisma.portfolio.findUnique({
-      where: { userId_stockId: { userId: req.userId!, stockId } },
+      where: { userId_stockId: { userId: req.userId!, stockId: stockId } },
     });
 
     if (!existing) {
@@ -126,7 +126,7 @@ export const removeHolding = async (req: AuthRequest, res: Response): Promise<vo
     await prisma.transaction.create({
       data: {
         userId: req.userId!,
-        stockId,
+        stockId: stockId,
         type: 'SELL',
         quantity,
         price,

@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import http from 'http';
+import { startMockPriceEngine, registerActiveSymbol } from '../services/mockPriceEngine';
 
 export const initializeSocket = (server: http.Server) => {
   const io = new Server(server, {
@@ -18,6 +19,7 @@ export const initializeSocket = (server: http.Server) => {
     // Join stock-specific rooms
     socket.on('subscribe:stock', (symbol: string) => {
       socket.join(`stock:${symbol}`);
+      registerActiveSymbol(symbol);
       console.log(`📈 ${socket.id} subscribed to stock:${symbol}`);
     });
 
@@ -43,6 +45,9 @@ export const initializeSocket = (server: http.Server) => {
       console.log(`❌ Client disconnected: ${socket.id} - ${reason}`);
     });
   });
+
+  // Start the engine
+  startMockPriceEngine(io);
 
   return io;
 };
