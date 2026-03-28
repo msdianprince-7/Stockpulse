@@ -1,6 +1,9 @@
 {
   "name": "stockpulse-server",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "description": "StockPulse - Real-Time Indian Stock Analytics Platform Backend",
   "main": "dist/index.js",
   "scripts": {
