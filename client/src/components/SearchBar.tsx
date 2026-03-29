@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from 'use-debounce';
-import { Search, Loader2, TrendingUp } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { stockAPI } from '@/lib/api';
 import { Stock } from '@/types';
 import { formatINR } from '@/lib/utils';
@@ -103,11 +103,7 @@ export const SearchBar = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {formatINR(stock.currentPrice)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-end gap-1 mt-1">
-                      <TrendingUp className="w-3 h-3" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {stock.sector || 'Equities'}
                     </p>
                   </div>

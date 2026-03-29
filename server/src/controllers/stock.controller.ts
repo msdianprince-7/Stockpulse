@@ -41,23 +41,8 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
       }
     });
 
-    // Fetch live prices for search results in a single bulk request
+    // Removed live price fetching for search dropdown based on user feedback
     const results = Array.from(resultsMap.values()).slice(0, 10);
-    const symbolsToFetch = results.map(r => r.symbol);
-    
-    try {
-      if (symbolsToFetch.length > 0) {
-        const livePrices = await stockService.getQuotes(symbolsToFetch);
-        results.forEach(stock => {
-          if (livePrices[stock.symbol]) {
-            stock.currentPrice = livePrices[stock.symbol];
-          }
-        });
-      }
-    } catch {
-      // Bulk price fetch failed, keep 0 as fallback
-    }
-
     res.json(results);
   } catch (error: any) {
     console.error('Search stocks error:', error);
