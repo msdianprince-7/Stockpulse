@@ -14,7 +14,6 @@ class StockService {
   async getQuote(symbol: string) {
     try {
       const quote: any = await yahooFinance.quote(this.getYahooNS(symbol));
-      // Map to expected format
       return {
         c: quote.regularMarketPrice,
         h: quote.regularMarketDayHigh,
@@ -25,6 +24,26 @@ class StockService {
     } catch (error) {
       console.error(`Failed to fetch quote for ${symbol}:`, error);
       throw error;
+    }
+  }
+
+  async getQuotes(symbols: string[]) {
+    try {
+      if (!symbols.length) return {};
+      const yahooSymbols = symbols.map(s => this.getYahooNS(s));
+      const quotes: any[] = await yahooFinance.quote(yahooSymbols);
+      
+      const results: Record<string, number> = {};
+      quotes.forEach(q => {
+        if (q.symbol && q.regularMarketPrice) {
+          const cleanSymbol = q.symbol.replace('.NS', '');
+          results[cleanSymbol] = q.regularMarketPrice;
+        }
+      });
+      return results;
+    } catch (error) {
+      console.error(`Bulk quotes failed:`, error);
+      return {};
     }
   }
 

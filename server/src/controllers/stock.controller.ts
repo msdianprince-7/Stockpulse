@@ -41,20 +41,22 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
       }
     });
 
-    // Fetch live prices for search results in parallel
+    // Fetch live prices for search results in a single bulk request
     const results = Array.from(resultsMap.values()).slice(0, 10);
-    await Promise.all(
-      results.map(async (stock) => {
-        try {
-          const liveQuote = await stockService.getQuote(stock.symbol);
-          if (liveQuote?.c) {
-            stock.currentPrice = liveQuote.c;
+    const symbolsToFetch = results.map(r => r.symbol);
+    
+    try {
+      if (symbolsToFetch.length > 0) {
+        const livePrices = await stockService.getQuotes(symbolsToFetch);
+        results.forEach(stock => {
+          if (livePrices[stock.symbol]) {
+            stock.currentPrice = livePrices[stock.symbol];
           }
-        } catch {
-          // Price fetch failed, keep 0 as fallback
-        }
-      })
-    );
+        });
+      }
+    } catch {
+      // Bulk price fetch failed, keep 0 as fallback
+    }
 
     res.json(results);
   } catch (error: any) {
