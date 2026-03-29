@@ -43,7 +43,7 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
 
     // Fetch live prices for search results in a single bulk request
     const results = Array.from(resultsMap.values()).slice(0, 10);
-    const symbolsToFetch = results.map(r => r.yahooSymbol).filter(Boolean);
+    const symbolsToFetch = results.map(r => r.symbol);
     
     try {
       if (symbolsToFetch.length > 0) {
@@ -85,6 +85,7 @@ export const getStockBySymbol = async (req: Request, res: Response): Promise<voi
             name: profile.name || symbol,
             exchange: profile.exchange === 'BSE' ? 'BSE' : 'NSE',
             sector: profile.industry || 'Equities',
+            marketCap: profile.marketCapitalization || null,
             currentPrice: currentQuote?.c || 0,
             dayHigh: currentQuote?.h || 0,
             dayLow: currentQuote?.l || 0,
@@ -101,14 +102,26 @@ export const getStockBySymbol = async (req: Request, res: Response): Promise<voi
       // before the WebSocket engine's 10-second polling ticks.
       try {
         const liveQuote = await stockService.getQuote(symbol);
+        const updatedData: any = {};
+        
         if (liveQuote && liveQuote.c && liveQuote.c !== stock.currentPrice) {
+          updatedData.currentPrice = liveQuote.c;
+          updatedData.dayHigh = liveQuote.h || stock.dayHigh;
+          updatedData.dayLow = liveQuote.l || stock.dayLow;
+        }
+
+        // Always attempt to backfill marketCap if missing
+        if (!stock.marketCap) {
+          const profile = await stockService.getCompanyProfile(symbol);
+          if (profile.marketCapitalization) {
+            updatedData.marketCap = profile.marketCapitalization;
+          }
+        }
+
+        if (Object.keys(updatedData).length > 0) {
           stock = await prisma.stock.update({
             where: { id: stock.id },
-            data: { 
-              currentPrice: liveQuote.c,
-              dayHigh: liveQuote.h || stock.dayHigh,
-              dayLow: liveQuote.l || stock.dayLow
-            }
+            data: updatedData
           });
         }
       } catch (e) {
