@@ -119,7 +119,7 @@ class StockService {
     try {
       // Use Google News RSS — Yahoo Finance search returns generic global news
       const https = require('https');
-      const query = encodeURIComponent(`${symbol} stock NSE India`);
+      const query = encodeURIComponent(`${symbol} stock NSE India when:7d`);
       const url = `https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`;
 
       return new Promise<any[]>((resolve) => {

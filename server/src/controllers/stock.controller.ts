@@ -14,34 +14,49 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
 
     const resultsMap = new Map<string, any>();
 
-    // Directly search Yahoo Finance via the wrapper service
-    try {
-      const yahooResults = await stockService.searchSymbol(queryStr);
-      const quotes = yahooResults.quotes || [];
+    // Run two parallel Yahoo searches: raw query + NSE-specific query
+    const searchPromises = [
+      stockService.searchSymbol(queryStr).catch(() => ({ quotes: [] })),
+      stockService.searchSymbol(queryStr + '.NS').catch(() => ({ quotes: [] })),
+    ];
+    const [rawResults, nsResults] = await Promise.all(searchPromises);
 
-      quotes.forEach((quote: any) => {
-        // Only safely include Indian stocks (NSE/BSE) or exact matches
-        if (quote.symbol && (quote.symbol.endsWith('.NS') || quote.symbol.endsWith('.BO'))) {
-          const cleanSymbol = quote.symbol.replace('.NS', '').replace('.BO', '');
-          
-          if (!resultsMap.has(cleanSymbol)) {
-            resultsMap.set(cleanSymbol, {
-              id: `yahoo_${cleanSymbol}`,
-              symbol: cleanSymbol,
-              name: quote.longname || quote.shortname || cleanSymbol,
-              exchange: quote.symbol.endsWith('.NS') ? 'NSE' : 'BSE',
-              sector: quote.sector || quote.industry || 'Equities',
-              currentPrice: 0, 
-            });
-          }
+    const allQuotes = [...(rawResults.quotes || []), ...(nsResults.quotes || [])];
+
+    allQuotes.forEach((quote: any) => {
+      if (quote.symbol && (quote.symbol.endsWith('.NS') || quote.symbol.endsWith('.BO'))) {
+        const cleanSymbol = quote.symbol.replace('.NS', '').replace('.BO', '');
+        
+        if (!resultsMap.has(cleanSymbol)) {
+          resultsMap.set(cleanSymbol, {
+            id: `yahoo_${cleanSymbol}`,
+            symbol: cleanSymbol,
+            yahooSymbol: quote.symbol,
+            name: quote.longname || quote.shortname || cleanSymbol,
+            exchange: quote.symbol.endsWith('.NS') ? 'NSE' : 'BSE',
+            sector: quote.sector || quote.industry || 'Equities',
+            currentPrice: 0, 
+          });
         }
-      });
-    } catch (yahooErr) {
-      console.error('Yahoo search error:', yahooErr);
-    }
+      }
+    });
 
-    // Convert map to array and return max 15 results
-    res.json(Array.from(resultsMap.values()).slice(0, 15));
+    // Fetch live prices for search results in parallel
+    const results = Array.from(resultsMap.values()).slice(0, 10);
+    await Promise.all(
+      results.map(async (stock) => {
+        try {
+          const liveQuote = await stockService.getQuote(stock.symbol);
+          if (liveQuote?.c) {
+            stock.currentPrice = liveQuote.c;
+          }
+        } catch {
+          // Price fetch failed, keep 0 as fallback
+        }
+      })
+    );
+
+    res.json(results);
   } catch (error: any) {
     console.error('Search stocks error:', error);
     res.status(500).json({ error: 'Failed to search stocks', details: error?.message, stack: error?.stack });

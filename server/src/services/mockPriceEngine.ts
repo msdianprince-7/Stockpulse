@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { redisSub, CHANNELS } from '../config/redis';
+import { safePublish, CHANNELS } from '../config/redis';
 import { Server } from 'socket.io';
 import YahooFinance from 'yahoo-finance2';
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -104,7 +104,7 @@ const updatePrices = async () => {
         ioInstance!.to(`stock:${symbol}`).emit('stock_price_update', updateEvent);
         
         // Also publish to Redis for multi-server scaling
-        redisSub.publish(CHANNELS.STOCK_PRICE_UPDATE, JSON.stringify(updateEvent));
+        safePublish(CHANNELS.STOCK_PRICE_UPDATE, JSON.stringify(updateEvent));
 
         // Check for triggered alerts
         try {
