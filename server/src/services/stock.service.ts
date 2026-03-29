@@ -27,16 +27,19 @@ class StockService {
     }
   }
 
-  async getQuotes(symbols: string[]) {
+  async getQuotes(yahooSymbols: string[]) {
     try {
-      if (!symbols.length) return {};
-      const yahooSymbols = symbols.map(s => this.getYahooNS(s));
-      const quotes: any[] = await yahooFinance.quote(yahooSymbols);
+      if (!yahooSymbols.length) return {};
+      
+      // { returnEmpty: true } prevents Yahoo Finance from throwing an error 
+      // if one or more of the symbols in the batch are invalid/delisted.
+      const quotes: any[] = await yahooFinance.quote(yahooSymbols, { returnEmpty: true } as any);
       
       const results: Record<string, number> = {};
       quotes.forEach(q => {
         if (q.symbol && q.regularMarketPrice) {
-          const cleanSymbol = q.symbol.replace('.NS', '');
+          // Map BHEL.NS or BHEL.BO back to their clean symbol BHEL
+          const cleanSymbol = q.symbol.replace('.NS', '').replace('.BO', '');
           results[cleanSymbol] = q.regularMarketPrice;
         }
       });

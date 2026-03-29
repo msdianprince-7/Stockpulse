@@ -43,7 +43,7 @@ export const searchStocks = async (req: Request, res: Response): Promise<void> =
 
     // Fetch live prices for search results in a single bulk request
     const results = Array.from(resultsMap.values()).slice(0, 10);
-    const symbolsToFetch = results.map(r => r.symbol);
+    const symbolsToFetch = results.map(r => r.yahooSymbol).filter(Boolean);
     
     try {
       if (symbolsToFetch.length > 0) {
