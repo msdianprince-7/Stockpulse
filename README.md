@@ -1,4 +1,4 @@
-# 📊 StockPulse – Real-Time Indian Stock Analytics Platform !
+# 📊 StockPulse – Real-Time Indian Stock Analytics Platform !!!
 
 🚀 **Live Demo:** [https://stockpulse-market7.vercel.app/](https://stockpulse-market7.vercel.app/)
 
